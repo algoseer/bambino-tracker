@@ -40,13 +40,14 @@ def load_data(start_date):
     return df
 
 def time_since_last(df, event_type, start_date):
-    filtered_df = df[pd.to_datetime(df['timestamp']).dt.date >= start_date]
+
+    filtered_df = df[pd.to_datetime(df['timestamp']).dt.date >= start_date] #this is in pdt
     last_event = filtered_df[filtered_df['event'] == event_type]['timestamp'].max()
 
     if pd.isnull(last_event):
         return "N/A"
     else:
-        last_event_dt = datetime.strptime(last_event, '%Y-%m-%d %H:%M:%S').replace(tzinfo=PDT)
+        last_event_dt = PDT.localize(datetime.strptime(last_event, '%Y-%m-%d %H:%M:%S'))
         now_pdt = datetime.now(PDT)
         last_event_epoch = int(last_event_dt.timestamp())
         now_pdt_epoch = int(now_pdt.timestamp())
