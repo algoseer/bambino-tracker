@@ -54,22 +54,27 @@ def time_since_last(df, event_type, start_date):
         time_diff = timedelta(seconds=time_diff_seconds)
         return str(time_diff)
 
+def count_events(df, event_type, start_date):
+    filtered_df = df[pd.to_datetime(df['timestamp']).dt.date >= start_date]
+    count = len(filtered_df[filtered_df['event'].str.startswith(event_type)])
+    return count
+
 def main():
     st.title("👶 Baby Tracking App")
 
     create_table()
 
     yesterday = date.today() - timedelta(days=1)
-    start_date = st.sidebar.date_input("Show events after:", yesterday)
+    start_date = st.sidebar.date_input("Show events from:", yesterday)
 
     if st.sidebar.button("Breastfeeding"):
         log_event("Breastfeeding")
 
     poop_pee_options = ["Pee", "Poop"]
-    poop_pee_selection = st.sidebar.segmented_control("Select type and color for diaper change", poop_pee_options, selection_mode="multi", default=["Poop"])
+    poop_pee_selection = st.sidebar.segmented_control("", poop_pee_options, selection_mode="multi", default=["Poop"])
 
     poop_color_options = ["black", "green", "yellow", "brown", "orange", "red", "white"]
-    poop_color = st.sidebar.selectbox("Poop color:", poop_color_options, index=1)
+    poop_color = st.sidebar.selectbox("Poop color:", poop_color_options)
 
     if st.sidebar.button("Diaper Change"):
         log_event("Diaper Change")
@@ -95,6 +100,12 @@ def main():
         st.metric("Time since last feeding", time_since_last(df, "Breastfeeding", start_date))
     with col3:
         st.metric("Time since last pain med", time_since_last(df, "Mom Painmeds", start_date))
+
+    _, col4, col5,_ = st.columns(4)
+    with col4:
+        st.metric("Pee count", count_events(df, "Pee", start_date))
+    with col5:
+        st.metric("Poop count", count_events(df, "Poop", start_date))
 
     st.dataframe(df)
 
