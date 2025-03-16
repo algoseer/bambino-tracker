@@ -52,6 +52,7 @@ def time_since_last(df, event_type, start_date):
         last_event_epoch = int(last_event_dt.timestamp())
         now_pdt_epoch = int(now_pdt.timestamp())
         time_diff_seconds = now_pdt_epoch - last_event_epoch
+        st.markdown(last_event_dt)
         time_diff = timedelta(seconds=time_diff_seconds)
         return str(time_diff)
 
@@ -83,17 +84,8 @@ def main():
     df = load_data(start_date)
 
     # Current Time Clock
-    current_time_placeholder = st.empty()
-
-    def update_clock():
-        while True:
-            now_pdt = datetime.now(PDT).strftime("%Y-%m-%d %H:%M:%S %Z")
-            current_time_placeholder.markdown(f"**Current Time (PDT):** {now_pdt}")
-            time.sleep(1)
-
-    import threading
-    clock_thread = threading.Thread(target=update_clock, daemon=True)
-    clock_thread.start()
+    now_pdt = datetime.now(PDT).strftime("%Y-%m-%d %H:%M:%S %Z")
+    st.metric("**Current Time (PDT):**", now_pdt)
 
     col1, col2, col3 = st.columns(3)
     with col1:
