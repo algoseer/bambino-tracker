@@ -71,10 +71,10 @@ def main():
         log_event("Breastfeeding")
 
     poop_pee_options = ["Pee", "Poop"]
-    poop_pee_selection = st.sidebar.segmented_control("", poop_pee_options, selection_mode="multi", default=["Poop"])
+    poop_pee_selection = st.sidebar.segmented_control("Select an option for diaper change", poop_pee_options, selection_mode="multi", default=["Poop"])
 
     poop_color_options = ["black", "green", "yellow", "brown", "orange", "red", "white"]
-    poop_color = st.sidebar.selectbox("Poop color:", poop_color_options)
+    poop_color = st.sidebar.selectbox("Poop color:", poop_color_options, index=1)
 
     if st.sidebar.button("Diaper Change"):
         log_event("Diaper Change")
