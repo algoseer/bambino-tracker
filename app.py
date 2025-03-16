@@ -52,7 +52,8 @@ def time_since_last(df, event_type, start_date):
         last_event_epoch = int(last_event_dt.timestamp())
         now_pdt_epoch = int(now_pdt.timestamp())
         time_diff_seconds = now_pdt_epoch - last_event_epoch
-        st.markdown(last_event_dt)
+        # st.markdown(last_event_dt)
+        # st.markdown(now_pdt)
         time_diff = timedelta(seconds=time_diff_seconds)
         return str(time_diff)
 
