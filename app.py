@@ -61,7 +61,7 @@ def count_events(df, event_type, start_date):
     return count
 
 def main():
-    st.title("👶 Baby Tracking App")
+    st.title("👶 Baby Tracking System 💜")
 
     create_table()
 
