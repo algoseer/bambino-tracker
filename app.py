@@ -4,6 +4,7 @@ import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta
 import pytz
+import time
 
 DATABASE_NAME = "baby_log.db"
 PDT = pytz.timezone('US/Pacific')
@@ -32,10 +33,10 @@ def log_event(event):
 
 def load_data():
     conn = sqlite3.connect(DATABASE_NAME)
-    df = pd.read_sql_query("SELECT * FROM baby_events ORDER BY timestamp ASC", conn) # Sort ascending
+    df = pd.read_sql_query("SELECT * FROM baby_events ORDER BY timestamp ASC", conn)
     conn.close()
-    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize('UTC').dt.tz_convert(PDT) # Convert to PDT
-    df['timestamp'] = df['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S') #reformat for display
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize('UTC').dt.tz_convert(PDT)
+    df['timestamp'] = df['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
     return df
 
 def time_since_last(df, event_type):
@@ -45,11 +46,15 @@ def time_since_last(df, event_type):
     else:
         last_event_dt = datetime.strptime(last_event, '%Y-%m-%d %H:%M:%S').replace(tzinfo=PDT)
         now_pdt = datetime.now(PDT)
-        time_diff = now_pdt - last_event_dt
+        last_event_epoch = int(last_event_dt.timestamp())
+        now_pdt_epoch = int(now_pdt.timestamp())
+        time_diff_seconds = now_pdt_epoch - last_event_epoch
+        st.markdown(time_diff_seconds)
+        time_diff = timedelta(seconds=time_diff_seconds)
         return str(time_diff)
 
 def main():
-    st.title("Baby Tracking App")
+    st.title("👶 Baby Tracking App")
 
     create_table()
 
@@ -66,6 +71,10 @@ def main():
 
     st.subheader("Event Log")
     df = load_data()
+
+    # Current Time Clock
+    now_pdt = datetime.now(PDT).strftime("%Y-%m-%d %H:%M:%S %Z")
+    st.metric(f"**Current Time (PDT):**", now_pdt)
 
     col1, col2, col3 = st.columns(3)
     with col1:
