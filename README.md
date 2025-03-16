@@ -18,3 +18,9 @@ pip install --progress-bar off -r requirements.txt
 ```
 
 Similarly during running container add `--privileged` to `docker run`.
+
+## Dashboard
+
+Currently the dashboard looks like this:
+
+![dashboard](dashboard.png)
