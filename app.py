@@ -4,7 +4,6 @@ import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta, date
 import pytz
-import time
 
 DATABASE_NAME = "baby_log.db"
 PDT = pytz.timezone('US/Pacific')
@@ -52,8 +51,6 @@ def time_since_last(df, event_type, start_date):
         last_event_epoch = int(last_event_dt.timestamp())
         now_pdt_epoch = int(now_pdt.timestamp())
         time_diff_seconds = now_pdt_epoch - last_event_epoch
-        # st.markdown(last_event_dt)
-        # st.markdown(now_pdt)
         time_diff = timedelta(seconds=time_diff_seconds)
         return str(time_diff)
 
@@ -63,20 +60,23 @@ def main():
     create_table()
 
     yesterday = date.today() - timedelta(days=1)
-    start_date = st.sidebar.date_input("Show events from:", yesterday)
+    start_date = st.sidebar.date_input("Show events after:", yesterday)
 
     if st.sidebar.button("Breastfeeding"):
         log_event("Breastfeeding")
 
     poop_pee_options = ["Pee", "Poop"]
-    poop_pee_selection = st.sidebar.segmented_control("",poop_pee_options,selection_mode = "multi", default=["Poop"])
+    poop_pee_selection = st.sidebar.segmented_control("Select type and color for diaper change", poop_pee_options, selection_mode="multi", default=["Poop"])
+
+    poop_color_options = ["black", "green", "yellow", "brown", "orange", "red", "white"]
+    poop_color = st.sidebar.selectbox("Poop color:", poop_color_options, index=1)
 
     if st.sidebar.button("Diaper Change"):
         log_event("Diaper Change")
         if "Pee" in poop_pee_selection:
             log_event("Pee")
         if "Poop" in poop_pee_selection:
-            log_event("Poop")
+            log_event(f"Poop, {poop_color}")
 
     if st.sidebar.button("Mom Painmeds"):
         log_event("Mom Painmeds")
