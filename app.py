@@ -65,7 +65,7 @@ def main():
 
     create_table()
 
-    yesterday = date.today() - timedelta(days=1)
+    yesterday = datetime.now(PDT) - timedelta(days=1)
     start_date = st.sidebar.date_input("Show events from:", yesterday)
 
     if st.sidebar.button("Breastfeeding"):
