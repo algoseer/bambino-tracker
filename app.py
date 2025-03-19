@@ -1,5 +1,3 @@
-## >> copy from working app.py
-
 # app.py
 import streamlit as st
 import sqlite3
@@ -23,11 +21,13 @@ def create_table():
     conn.commit()
     conn.close()
 
-def log_event(event):
+def log_event(event, comments=""):
     now_utc = datetime.utcnow()
     now_str = now_utc.strftime("%Y-%m-%d %H:%M:%S")
     conn = sqlite3.connect(DATABASE_NAME)
     c = conn.cursor()
+    if comments:
+        event=f"{event}+{comments}"
     c.execute("INSERT INTO baby_events (timestamp, event) VALUES (?, ?)", (now_str, event))
     conn.commit()
     conn.close()
@@ -47,7 +47,7 @@ def load_data(start_date):
 def time_since_last(df, event_type, start_date):
 
     filtered_df = df[pd.to_datetime(df['timestamp']).dt.date >= start_date] #this is in pdt
-    last_event = filtered_df[filtered_df['event'] == event_type]['timestamp'].max()
+    last_event = filtered_df[filtered_df['event'].str.startswith(event_type)]['timestamp'].max()
 
     if pd.isnull(last_event):
         return "N/A"
@@ -85,8 +85,9 @@ def main():
     yesterday = date.today() - timedelta(days=1)
     start_date = st.sidebar.date_input("Show events from:", yesterday)
 
+    comments = st.sidebar.text_input("Comments")
     if st.sidebar.button("Breastfeeding"):
-        log_event("Breastfeeding")
+        log_event("Breastfeeding", comments=comments)
 
     poop_pee_options = ["Pee", "Poop"]
     poop_pee_selection = st.sidebar.segmented_control("", poop_pee_options, selection_mode="multi", default=["Poop"])
@@ -99,7 +100,7 @@ def main():
         if "Pee" in poop_pee_selection:
             log_event("Pee")
         if "Poop" in poop_pee_selection:
-            log_event(f"Poop, {poop_color}")
+            log_event(f"Poop, {poop_color}", comments=comments)
 
     if st.sidebar.button("Mom Painmeds"):
         log_event("Mom Painmeds")
