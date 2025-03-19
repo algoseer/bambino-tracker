@@ -3,6 +3,7 @@ import streamlit as st
 import sqlite3
 import time
 import pandas as pd
+from functools import partial
 from datetime import datetime, timedelta, date
 import pytz
 
@@ -33,6 +34,16 @@ def log_event(event, comments=""):
     conn.close()
     st.success(f"Logged: {event} at {now_utc.astimezone(PDT).strftime('%Y-%m-%d %H:%M:%S')} PDT")
 
+def extract_comment(s, idx=1):
+    if isinstance(s, str) and '+' in s:
+        try:
+            return s.split('+')[idx]
+        except IndexError:
+            return "" # Handles cases where there's no element at index 1
+    else:
+        return s if idx==0 else None   # Handles non-string or no '+' cases
+
+
 def load_data(start_date):
     conn = sqlite3.connect(DATABASE_NAME)
     df = pd.read_sql_query("SELECT rowid,timestamp, event FROM baby_events ORDER BY timestamp DESC", conn)
@@ -41,6 +52,10 @@ def load_data(start_date):
     df = df[df['timestamp'].dt.date >= start_date]
     df['date'] = df['timestamp'].dt.date
     df['time'] = df['timestamp'].dt.time
+
+    df['comments'] = df['event'].apply(partial(extract_comment,idx=1))
+    df['event'] = df['event'].apply(partial(extract_comment,idx=0))
+
     df['timestamp'] = df['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
     return df
 
@@ -65,14 +80,19 @@ def count_events(df, event_type, start_date):
     count = len(filtered_df[filtered_df['event'].str.startswith(event_type)])
     return count
 
-def update_timestamps(df_edited):
+def update_logs(df_edited):
     try:
         conn = sqlite3.connect(DATABASE_NAME)
         c = conn.cursor()
         for index, row in df_edited.iterrows():
             combined_datetime = datetime.combine(row['date'], row['time'])
             combined_datetime_utc = combined_datetime.astimezone(pytz.utc).strftime('%Y-%m-%d %H:%M:%S')
-            c.execute("UPDATE baby_events SET timestamp = ?, event = ? WHERE rowid = ?", (combined_datetime_utc, row['event'], row['rowid']))
+            if row['comments']:
+                combined_event_comment = f"{row['event']}+{row['comments']}"
+            else:
+                combined_event_comment =  row["event"]
+
+            c.execute("UPDATE baby_events SET timestamp = ?, event = ? WHERE rowid = ?", (combined_datetime_utc, combined_event_comment, row['rowid']))
         conn.commit()
         conn.close()
         st.success("Timestamps updated!")
@@ -125,7 +145,7 @@ def main():
     with col5:
         st.metric("Poop count", count_events(df, "Poop", start_date))
 
-    edit_mode = st.sidebar.checkbox("Edit Timestamps")
+    edit_mode = st.sidebar.checkbox("Edit Logs")
 
     if edit_mode:
         df_edited = st.data_editor(df, column_config={
@@ -133,7 +153,7 @@ def main():
         }, hide_index=True, disabled = ['rowid','date', 'timestamp' ])
 
         if st.button("Save Edits"):
-            update_timestamps(df_edited)
+            update_logs(df_edited)
             time.sleep(1)
             st.rerun()
     else:
