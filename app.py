@@ -8,7 +8,7 @@ import pandas as pd
 from datetime import datetime, timedelta, date
 import pytz
 
-DATABASE_NAME = "baby_log_test.db"
+DATABASE_NAME = "baby_log.db"
 PDT = pytz.timezone('US/Pacific')
 
 def create_table():
