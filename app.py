@@ -6,6 +6,7 @@ import pandas as pd
 from functools import partial
 from datetime import datetime, timedelta, date
 import pytz
+import plotly.graph_objects as go
 
 DATABASE_NAME = "baby_log.db"
 PDT = pytz.timezone('US/Pacific')
@@ -98,6 +99,46 @@ def update_logs(df_edited):
         st.success("Timestamps updated!")
     except ValueError:
         st.error("Invalid timestamp format.")
+
+#Plot data that is showing in the table below on a radar plot
+def create_radar_plot(df):
+    df_filtered = df.copy()
+    categories = ['Breastfeeding', 'Pee', 'Poop']
+    colors = ['brown', 'blue', 'green']
+    markers = ['circle-open-dot','square-open', 'x']
+    fig = go.Figure()
+
+    idx = 0.5
+    for marker, category, color in zip(markers, categories, colors):
+        filtered_events = df_filtered[df_filtered['event'].str.startswith(category)]
+        times = [(t.hour + t.minute / 60)*360/24 for t in filtered_events['time']]
+        fig.add_trace(go.Scatterpolar(
+            r=[idx] * len(times),
+            theta=times,
+            mode='markers',
+            marker=dict(symbol=marker,color=color, size=8),
+            name=category,
+            hovertemplate=None,
+            hoverinfo='skip',
+        ))
+        idx+=0.2
+
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(visible=False),
+            angularaxis=dict(
+                tickmode='array', 
+                tickvals=list(range(0,360, 15)),
+                ticktext=[f"{i:02d}:00" for i in range(24)],
+                direction='clockwise',
+                rotation=90,
+            )
+        ),
+        title='Daily Activity Radar Plot',
+    )
+    return fig
+
+
 def main():
     st.title("👶 Baby Tracking System 💜")
     create_table()
@@ -125,8 +166,12 @@ def main():
     if st.sidebar.button("Mom Painmeds"):
         log_event("Mom Painmeds")
 
-    st.subheader("Event Log")
     df = load_data(start_date)
+
+    stats = st.toggle("Show daily stats")
+    if stats:
+        fig = create_radar_plot(df)
+        st.plotly_chart(fig)
 
     now_pdt = datetime.now(PDT).strftime("%Y-%m-%d %H:%M:%S %Z")
     st.metric("**Current Time (PDT):**", now_pdt)
@@ -145,7 +190,9 @@ def main():
     with col5:
         st.metric("Poop count", count_events(df, "Poop", start_date))
 
-    edit_mode = st.sidebar.checkbox("Edit Logs")
+    # edit_mode = st.sidebar.checkbox("Edit Logs")
+    edit_mode = False
+
 
     if edit_mode:
         df_edited = st.data_editor(df, column_config={
