@@ -11,8 +11,8 @@ import plotly.graph_objects as go
 DATABASE_NAME = "baby_log.db"
 PDT = pytz.timezone('US/Pacific')
 
-def create_table():
-    conn = sqlite3.connect(DATABASE_NAME)
+def create_table(dbname=DATABASE_NAME):
+    conn = sqlite3.connect(dbname)
     c = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS baby_events (
@@ -86,7 +86,7 @@ def update_logs(df_edited):
         conn = sqlite3.connect(DATABASE_NAME)
         c = conn.cursor()
         for index, row in df_edited.iterrows():
-            combined_datetime = datetime.combine(row['date'], row['time'])
+            combined_datetime = PDT.localize(datetime.combine(row['date'], row['time']))
             combined_datetime_utc = combined_datetime.astimezone(pytz.utc).strftime('%Y-%m-%d %H:%M:%S')
             if row['comments']:
                 combined_event_comment = f"{row['event']}+{row['comments']}"
@@ -109,7 +109,7 @@ def create_radar_plot(df):
     fig = go.Figure()
 
     idx = 0.5
-    date = df_filtered.iloc[0]['date']
+    date = df_filtered['date'].iloc[-1]
     for marker, category, color in zip(markers, categories, colors):
         filtered_events = df_filtered[df_filtered['event'].str.startswith(category)]
         times = [(t.hour + t.minute / 60)*360/24 for t in filtered_events['time']]
@@ -191,8 +191,8 @@ def main():
     with col5:
         st.metric("Poop count", count_events(df, "Poop", start_date))
 
-    # edit_mode = st.sidebar.checkbox("Edit Logs")
-    edit_mode = False
+    edit_mode = st.sidebar.checkbox("Edit Logs")
+    # edit_mode = False
 
 
     if edit_mode:
