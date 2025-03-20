@@ -109,6 +109,7 @@ def create_radar_plot(df):
     fig = go.Figure()
 
     idx = 0.5
+    date = df_filtered.iloc[0]['date']
     for marker, category, color in zip(markers, categories, colors):
         filtered_events = df_filtered[df_filtered['event'].str.startswith(category)]
         times = [(t.hour + t.minute / 60)*360/24 for t in filtered_events['time']]
@@ -134,7 +135,7 @@ def create_radar_plot(df):
                 rotation=90,
             )
         ),
-        title='Daily Activity Radar Plot',
+        title=f'Daily Activity for {date}',
     )
     return fig
 
