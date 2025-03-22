@@ -101,8 +101,17 @@ def update_logs(df_edited):
         st.error("Invalid timestamp format.")
 
 #Plot data that is showing in the table below on a radar plot
-def create_radar_plot(df):
+def create_radar_plot(df, timestamp_column='timestamp'):
+
+    ## Filter only for events in the last 24 hrs.
     df_filtered = df.copy()
+    ts = pd.to_datetime(df_filtered[timestamp_column]).dt.tz_localize(PDT)
+    # Get the current time, and subtract 24 hours
+    now = datetime.now(PDT)
+    twenty_four_hours_ago = now - timedelta(hours=24)
+    # Filter the DataFrame
+    df_filtered = df_filtered[ts >= twenty_four_hours_ago]
+
     categories = ['Breastfeeding', 'Pee', 'Poop']
     colors = ['brown', 'blue', 'green']
     markers = ['circle-open-dot','square-open', 'x']
