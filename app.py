@@ -157,25 +157,37 @@ def main():
     yesterday = date.today() - timedelta(days=1)
     start_date = st.sidebar.date_input("Show events from:", yesterday)
 
+    disable_push =  bool(int(st.query_params.get("viewonly", "0")))
+
     comments = st.sidebar.text_input("Comments")
-    if st.sidebar.button("Breastfeeding"):
+    if st.sidebar.button("Breastfeeding",icon="🍼", disabled=disable_push):
         log_event("Breastfeeding", comments=comments)
 
+
+    st.sidebar.divider()
     poop_pee_options = ["Pee", "Poop"]
     poop_pee_selection = st.sidebar.segmented_control("", poop_pee_options, selection_mode="multi", default=["Poop"])
 
     poop_color_options = ["black", "green", "yellow", "brown", "orange", "red", "white"]
     poop_color = st.sidebar.selectbox("Poop color:", poop_color_options, index=2)
 
-    if st.sidebar.button("Diaper Change"):
+    if st.sidebar.button("Diaper Change",icon="🩲", disabled=disable_push):
         log_event("Diaper Change")
         if "Pee" in poop_pee_selection:
             log_event("Pee")
         if "Poop" in poop_pee_selection:
             log_event(f"Poop, {poop_color}", comments=comments)
 
-    if st.sidebar.button("Mom Painmeds"):
+    
+    st.sidebar.divider()
+    if st.sidebar.button("Mom Painmeds",icon=":material/medication:", disabled=disable_push):
         log_event("Mom Painmeds")
+
+    if st.sidebar.button("Prenatal vitamins", icon="💊", disabled=disable_push):
+        log_event("Prenatal vitamins")
+
+    if st.sidebar.button("Vitamin D", icon=":material/water_drop:", disabled=disable_push):
+        log_event("Vitamin D")
 
     df = load_data(start_date)
 
@@ -184,24 +196,32 @@ def main():
         fig = create_radar_plot(df)
         st.plotly_chart(fig)
 
-    now_pdt = datetime.now(PDT).strftime("%Y-%m-%d %H:%M:%S %Z")
-    st.metric("**Current Time (PDT):**", now_pdt)
+    # now_pdt = datetime.now(PDT).strftime("%Y-%m-%d %H:%M:%S %Z")
+    # st.metric("**Current Time (PDT):**", now_pdt)
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Time since last diaper change", time_since_last(df, "Diaper Change", start_date))
-    with col2:
-        st.metric("Time since last feeding", time_since_last(df, "Breastfeeding", start_date))
+    st.subheader("Time since last")
+    _,col3, col4,_  = st.columns(4)
     with col3:
-        st.metric("Time since last pain med", time_since_last(df, "Mom Painmeds", start_date))
-
-    _,col4, col5,_ = st.columns(4)
+        st.metric("🩲 Diaper change", time_since_last(df, "Diaper Change", start_date))
     with col4:
-        st.metric("Pee count", count_events(df, "Pee", start_date))
+        st.metric("🍼 Feeding", time_since_last(df, "Breastfeeding", start_date))
+
+    col4, col5,col6 = st.columns(3)
+    with col4:
+        st.metric(":woman: Pain Med", time_since_last(df, "Mom Painmeds", start_date))
     with col5:
+        st.metric(":baby: Vitamin D", time_since_last(df, "Vitamin D", start_date))
+    with col6:
+        st.metric(":woman: Prenatal vitamins", time_since_last(df, "Prenatal vitamins", start_date))
+
+    _,col1, col2,_ = st.columns(4)
+    with col1:
+        st.metric("Pee count", count_events(df, "Pee", start_date))
+    with col2:
         st.metric("Poop count", count_events(df, "Poop", start_date))
 
-    edit_mode = st.sidebar.checkbox("Edit Logs")
+
+    edit_mode = st.sidebar.checkbox("Edit Logs", disabled=disable_push)
     # edit_mode = False
 
 
