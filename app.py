@@ -228,7 +228,7 @@ def main():
     if edit_mode:
         df_edited = st.data_editor(df, column_config={
             'time': st.column_config.TimeColumn("Time")
-        }, hide_index=True, disabled = ['rowid','date', 'timestamp' ])
+        }, hide_index=True, disabled = ['rowid', 'timestamp' ])
 
         if st.button("Save Edits"):
             update_logs(df_edited)
