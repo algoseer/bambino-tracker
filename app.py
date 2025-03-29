@@ -10,6 +10,9 @@ import plotly.graph_objects as go
 
 DATABASE_NAME = "baby_log.db"
 PDT = pytz.timezone('US/Pacific')
+# Get the current time, and subtract 24 hours
+now = datetime.now(PDT)
+twenty_four_hours_ago = now - timedelta(hours=24)
 
 def create_table(dbname=DATABASE_NAME):
     conn = sqlite3.connect(dbname)
@@ -63,7 +66,8 @@ def load_data(start_date):
 def time_since_last(df, event_type, start_date):
 
     filtered_df = df[pd.to_datetime(df['timestamp']).dt.date >= start_date] #this is in pdt
-    last_event = filtered_df[filtered_df['event'].str.startswith(event_type)]['timestamp'].max()
+    last_event_df = filtered_df[filtered_df['event'].str.startswith(event_type)]
+    last_event = last_event_df['timestamp'].max()
 
     if pd.isnull(last_event):
         return "N/A"
@@ -74,12 +78,47 @@ def time_since_last(df, event_type, start_date):
         now_pdt_epoch = int(now_pdt.timestamp())
         time_diff_seconds = now_pdt_epoch - last_event_epoch
         time_diff = timedelta(seconds=time_diff_seconds)
-        return str(time_diff)
 
-def count_events(df, event_type, start_date):
-    filtered_df = df[pd.to_datetime(df['timestamp']).dt.date >= start_date]
+        if event_type == "Breastfeeding":
+            #For bf add modifier for side
+            last_event_string = last_event_df[last_event_df['timestamp']==last_event]["event"].iloc[0]
+            last_event_string = last_event_string.split(',')
+            modifier = ''
+            if 'L' in last_event_string:
+                modifier += ":point_left:"
+            if 'R' in last_event_string:
+                modifier += ':point_right:'
+            return str(time_diff), modifier
+        else:
+            return str(time_diff)
+
+def count_events(df, event_type, start_time):
+    # filtered_df = df[pd.to_datetime(df['timestamp']).dt.date >= start_time]
+    filtered_df = df[pd.to_datetime(df['timestamp']).dt.tz_localize(PDT) >= start_time]
     count = len(filtered_df[filtered_df['event'].str.startswith(event_type)])
     return count
+
+def count_balance(df, start_date):
+    filtered_df = df[pd.to_datetime(df['timestamp']).dt.date >= start_date]
+    count = {"L":0, "R":0}
+    for el in filtered_df['event']:
+        if 'L' in el:
+            count['L'] +=1
+        if 'R' in el:
+            count['R'] +=1
+
+    fig = go.Figure(data=[go.Pie(labels=['left', 'right'], values=[count['L'], count['R']], marker_colors=['blue', 'red'])])
+    fig.update_layout(
+        title={
+            'text': 'Feed stats',
+            'y': 0.6,  # Adjust vertical position (0 to 1)
+            'x': 0.6,  # Adjust horizontal position (0 to 1)
+            'xanchor': 'center',  # Center the title horizontally
+            'yanchor': 'top'  # Position the top of the title at the specified y-coordinate
+        }
+    )
+
+    return count, fig
 
 def update_logs(df_edited):
     try:
@@ -106,9 +145,6 @@ def create_radar_plot(df, timestamp_column='timestamp'):
     ## Filter only for events in the last 24 hrs.
     df_filtered = df.copy()
     ts = pd.to_datetime(df_filtered[timestamp_column]).dt.tz_localize(PDT)
-    # Get the current time, and subtract 24 hours
-    now = datetime.now(PDT)
-    twenty_four_hours_ago = now - timedelta(hours=24)
     # Filter the DataFrame
     df_filtered = df_filtered[ts >= twenty_four_hours_ago]
 
@@ -159,9 +195,20 @@ def main():
 
     disable_push =  bool(int(st.query_params.get("viewonly", "0")))
 
+
     comments = st.sidebar.text_input("Comments")
+
+    feeding_options = [":point_left:", ":point_right:"]
+    feeding_selection = st.sidebar.segmented_control("", feeding_options, selection_mode="multi", default=feeding_options)
     if st.sidebar.button("Breastfeeding",icon="🍼", disabled=disable_push):
-        log_event("Breastfeeding", comments=comments)
+        event = ["Breastfeeding"]
+        if ':point_left:' in feeding_selection:
+            event += 'L'
+        if ':point_right:' in feeding_selection:
+            event += 'R'
+
+        event= ','.join(event)
+        log_event(event, comments=comments)
 
 
     st.sidebar.divider()
@@ -193,8 +240,13 @@ def main():
 
     stats = st.toggle("Show daily stats")
     if stats:
-        fig = create_radar_plot(df)
-        st.plotly_chart(fig)
+        cola, colb = st.columns(2)
+        with cola:
+            fig = create_radar_plot(df)
+            st.plotly_chart(fig)
+        with colb:
+            ctr, fig = count_balance(df, start_date)
+            st.plotly_chart(fig)
 
     # now_pdt = datetime.now(PDT).strftime("%Y-%m-%d %H:%M:%S %Z")
     # st.metric("**Current Time (PDT):**", now_pdt)
@@ -204,7 +256,9 @@ def main():
     with col3:
         st.metric("🩲 Diaper change", time_since_last(df, "Diaper Change", start_date))
     with col4:
-        st.metric("🍼 Feeding", time_since_last(df, "Breastfeeding", start_date))
+        #Find last feeding side
+        last_time, modifier = time_since_last(df, "Breastfeeding", start_date)
+        st.metric(f"🍼 Feeding {modifier}", last_time)
 
     col4, col5,col6 = st.columns(3)
     with col4:
@@ -214,11 +268,13 @@ def main():
     with col6:
         st.metric(":woman: Prenatal vitamins", time_since_last(df, "Prenatal vitamins", start_date))
 
-    _,col1, col2,_ = st.columns(4)
+
+    _,col1, col2, _ = st.columns(4)
     with col1:
-        st.metric("Pee count", count_events(df, "Pee", start_date))
+        st.metric("Pee count", count_events(df, "Pee", twenty_four_hours_ago))
     with col2:
-        st.metric("Poop count", count_events(df, "Poop", start_date))
+        st.metric("Poop count", count_events(df, "Poop", twenty_four_hours_ago))
+
 
 
     edit_mode = st.sidebar.checkbox("Edit Logs", disabled=disable_push)
