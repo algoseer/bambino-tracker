@@ -84,16 +84,16 @@ def time_since_last(df, event_type, start_date):
             last_event_string = last_event_df[last_event_df['timestamp']==last_event]["event"].iloc[0]
             last_event_string = last_event_string.split(',')
             modifier = ''
-            if 'L' in last_event_string:
-                modifier += ":point_left:"
             if 'R' in last_event_string:
-                modifier += ':point_right:'
+                modifier += ":point_right:"
+            if 'L' in last_event_string:
+                modifier += ':point_left:'
             return str(time_diff), modifier
         else:
             return str(time_diff)
 
 def count_events(df, event_type, start_time):
-    # filtered_df = df[pd.to_datetime(df['timestamp']).dt.date >= start_time]
+    #only last 24 hrs not by date
     filtered_df = df[pd.to_datetime(df['timestamp']).dt.tz_localize(PDT) >= start_time]
     count = len(filtered_df[filtered_df['event'].str.startswith(event_type)])
     return count
@@ -119,6 +119,43 @@ def count_balance(df, start_date):
     )
 
     return count, fig
+
+def analyze_sleep_durations(df,start_date):
+    """
+    Analyzes sleep durations from a DataFrame of events.
+
+    Args:
+        df (pd.DataFrame): DataFrame with 'timestamp' and 'event' columns.
+        start_date (datetime.date): Date to start analysis from.
+
+    Returns:
+        list: A list of tuples, where each tuple contains (start_time, duration).
+    """
+
+    df = df.copy()
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize(PDT)
+    df = df[df['timestamp'].dt.date >= start_date].sort_values(by='timestamp')
+
+    sleep_data = []
+    sleep_start = None
+
+    for index, row in df.iterrows():
+        event = row['event']
+        timestamp = row['timestamp']
+
+        if event.startswith("Sleep"):
+            sleep_start = timestamp
+        elif sleep_start and (event.startswith('Diaper') or event.startswith('Breastfeeding')):
+            sleep_end = timestamp
+            duration = sleep_end - sleep_start
+            sleep_data.append((sleep_start, duration))
+            sleep_start = None  # Reset sleep start
+
+    if sleep_data:
+        sleep_df = pd.DataFrame(sleep_data, columns=['start_time', 'duration'])
+        return sleep_df
+    else:
+        return pd.DataFrame(columns=['start_time', 'duration']) # return empty dataframe if no results.
 
 def update_logs(df_edited):
     try:
@@ -199,7 +236,7 @@ def main():
     comments = st.sidebar.text_input("Comments")
 
     feeding_options = [":point_left:", ":point_right:"]
-    feeding_selection = st.sidebar.segmented_control("", feeding_options, selection_mode="multi", default=feeding_options)
+    feeding_selection = st.sidebar.segmented_control("", feeding_options, selection_mode="multi", default=[])
     if st.sidebar.button("Breastfeeding",icon="🍼", disabled=disable_push):
         event = ["Breastfeeding"]
         if ':point_left:' in feeding_selection:
@@ -210,6 +247,8 @@ def main():
         event= ','.join(event)
         log_event(event, comments=comments)
 
+    if st.sidebar.button("Sleep", icon="😴", disabled = disable_push):
+        log_event('Sleep', comments=comments)
 
     st.sidebar.divider()
     poop_pee_options = ["Pee", "Poop"]
@@ -240,25 +279,47 @@ def main():
 
     stats = st.toggle("Show daily stats")
     if stats:
-        cola, colb = st.columns(2)
+        cola, colb= st.columns(2)
         with cola:
             fig = create_radar_plot(df)
             st.plotly_chart(fig)
         with colb:
             ctr, fig = count_balance(df, start_date)
             st.plotly_chart(fig)
+        colc, _ = st.columns(2)
+        with colc:
+            sleep_df = analyze_sleep_durations(df, start_date)
+            avg_duration = sleep_df['duration'].mean()
+            total_seconds = avg_duration.total_seconds()
+            hours = int(total_seconds // 3600)
+            minutes = int((total_seconds % 3600) // 60)
+            st.metric(f"Average sleep duration", f"{hours:02d}:{minutes:02d}")
+            st.dataframe(
+                sleep_df,
+                hide_index=True,
+            )
+
+        st.divider()
 
     # now_pdt = datetime.now(PDT).strftime("%Y-%m-%d %H:%M:%S %Z")
     # st.metric("**Current Time (PDT):**", now_pdt)
 
     st.subheader("Time since last")
-    _,col3, col4,_  = st.columns(4)
+    col3, col4, col4b  = st.columns(3)
     with col3:
-        st.metric("🩲 Diaper change", time_since_last(df, "Diaper Change", start_date))
+        last_time_diaper = time_since_last(df, "Diaper Change", start_date)
+        st.metric("🩲 Diaper change", last_time_diaper)
     with col4:
         #Find last feeding side
-        last_time, modifier = time_since_last(df, "Breastfeeding", start_date)
-        st.metric(f"🍼 Feeding {modifier}", last_time)
+        last_time_feeding, modifier = time_since_last(df, "Breastfeeding", start_date)
+        st.metric(f"🍼 Feeding {modifier}", last_time_feeding)
+    with col4b:
+        #Find last feeding side
+        last_time = time_since_last(df, "Sleep", start_date)
+        if last_time < last_time_diaper and last_time < last_time_feeding:
+            st.metric(f":sleeping: Sleep", last_time)
+        else:
+            st.metric("N/A")
 
     col4, col5,col6 = st.columns(3)
     with col4:
