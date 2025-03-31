@@ -177,9 +177,9 @@ def create_radar_plot(df, timestamp_column='timestamp'):
     # Filter the DataFrame
     df_filtered = df_filtered[ts >= twenty_four_hours_ago]
 
-    categories = ['Breastfeeding', 'Pee', 'Poop']
-    colors = ['brown', 'blue', 'green']
-    markers = ['circle-open-dot','square-open', 'x']
+    categories = ['Sleep','Breastfeeding', 'Pee', 'Poop']
+    colors = ['magenta','brown', 'blue', 'green']
+    markers = ['asterisk-open','circle-open-dot','square-open', 'x']
     fig = go.Figure()
 
     idx = 0.5
@@ -198,7 +198,7 @@ def create_radar_plot(df, timestamp_column='timestamp'):
             name=category,
             hovertemplate="%{customdata}<extra></extra>",
         ))
-        idx+=0.2
+        idx+=0.4
 
     fig.update_layout(
         polar=dict(
