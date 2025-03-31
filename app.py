@@ -7,9 +7,12 @@ from functools import partial
 from datetime import datetime, timedelta, date
 import pytz
 import plotly.graph_objects as go
+import plotly.express as px
 
 DATABASE_NAME = "baby_log.db"
 PDT = pytz.timezone('US/Pacific')
+yesterday = date.today() - timedelta(days=1)
+start_date = st.sidebar.date_input("Show events from:", yesterday)
 # Get the current time, and subtract 24 hours
 now = datetime.now(PDT)
 twenty_four_hours_ago = now - timedelta(hours=24)
@@ -227,8 +230,6 @@ def main():
     st.title("👶 Baby Tracking System 💜")
     create_table()
 
-    yesterday = date.today() - timedelta(days=1)
-    start_date = st.sidebar.date_input("Show events from:", yesterday)
 
     disable_push =  bool(int(st.query_params.get("viewonly", "0")))
 
@@ -286,18 +287,49 @@ def main():
         with colb:
             ctr, fig = count_balance(df, start_date)
             st.plotly_chart(fig)
-        colc, _ = st.columns(2)
-        with colc:
-            sleep_df = analyze_sleep_durations(df, start_date)
-            avg_duration = sleep_df['duration'].mean()
-            total_seconds = avg_duration.total_seconds()
+
+        colc, cold = st.columns(2)
+
+        def dt_to_hr_mins(time):
+            total_seconds = time.total_seconds()
             hours = int(total_seconds // 3600)
             minutes = int((total_seconds % 3600) // 60)
+            return hours, minutes
+        
+        def format_timestamp_with_day_period(timestamp):
+            """Formats a timestamp to 'YYYY-MM-DD / Afternoon / 3:43 PM' or 'YYYY-MM-DD / Morning' etc."""
+            if not isinstance(timestamp, datetime):
+                raise TypeError("Input must be a datetime object")
+
+            hour = timestamp.hour
+            date_str = timestamp.strftime("%Y-%m-%d")
+            time_str = timestamp.strftime("%I:%M %p") # 12-hour format with AM/PM
+
+            if 6 <= hour < 12:
+                return f"{date_str} / Morning / {time_str}"
+            elif 12 <= hour < 17:
+                return f"{date_str} / Afternoon / {time_str}"
+            elif 17 <= hour < 22:
+                return f"{date_str} / Evening / {time_str}"
+            else:
+                return f"{date_str} / Night / {time_str}"
+
+        with colc:
+            sleep_df = analyze_sleep_durations(df, start_date)
+            avg_duration = sleep_df['duration'].median()
+            max_duration = sleep_df['duration'].max()
+
+            hours, minutes = dt_to_hr_mins(avg_duration)
             st.metric(f"Average sleep duration", f"{hours:02d}:{minutes:02d}")
-            st.dataframe(
-                sleep_df,
-                hide_index=True,
-            )
+
+            hours, minutes = dt_to_hr_mins(max_duration)
+            st.metric(f"Longest sleep duration", f"{hours:02d}:{minutes:02d}")
+
+        with cold:
+            sleep_df = sleep_df.sort_values(by='duration', ascending=False).reset_index(drop=True)
+            sleep_df["start_time"] = sleep_df['start_time'].apply(format_timestamp_with_day_period)
+            st.markdown(":blue[Top scores last 24 hrs]")
+            st.dataframe(sleep_df.head(5), hide_index=True)
 
         st.divider()
 
@@ -319,7 +351,7 @@ def main():
         if last_time < last_time_diaper and last_time < last_time_feeding:
             st.metric(f":sleeping: Sleep", last_time)
         else:
-            st.metric("N/A")
+            st.metric(f":sleeping: Sleep", "N/A")
 
     col4, col5,col6 = st.columns(3)
     with col4:
