@@ -188,9 +188,9 @@ def create_radar_plot(df, timestamp_column='timestamp'):
     # Filter the DataFrame
     df_filtered = df_filtered[ts >= twenty_four_hours_ago]
 
-    categories = ['Breastfeeding', 'Pee', 'Poop']
-    colors = ['brown', 'blue', 'green']
-    markers = ['circle-open-dot','square-open', 'x']
+    categories = ['Sleep','Breastfeeding', 'Pee', 'Poop']
+    colors = ['magenta','brown', 'blue', 'green']
+    markers = ['asterisk-open','circle-open-dot','square-open', 'x']
     fig = go.Figure()
 
     idx = 0.5
@@ -198,9 +198,10 @@ def create_radar_plot(df, timestamp_column='timestamp'):
     for marker, category, color in zip(markers, categories, colors):
         filtered_events = df_filtered[df_filtered['event'].str.startswith(category)]
         times = [(t.hour + t.minute / 60)*360/24 for t in filtered_events['time']]
+        dates = [1 if d==date else 0 for d in filtered_events['date']]
         comments = [a if a else "" for a in filtered_events['comments']]
         fig.add_trace(go.Scatterpolar(
-            r=[idx] * len(times),
+            r=[idx-0.2*d for d in dates],
             theta=times,
             mode='markers',
             customdata=comments,
@@ -208,7 +209,7 @@ def create_radar_plot(df, timestamp_column='timestamp'):
             name=category,
             hovertemplate="%{customdata}<extra></extra>",
         ))
-        idx+=0.2
+        idx+=0.4
 
     fig.update_layout(
         polar=dict(
@@ -328,7 +329,7 @@ def main():
         with cold:
             sleep_df = sleep_df.sort_values(by='duration', ascending=False).reset_index(drop=True)
             sleep_df["start_time"] = sleep_df['start_time'].apply(format_timestamp_with_day_period)
-            st.markdown(":blue[Top scores last 24 hrs]")
+            st.markdown(":green[Top scores last 24 hrs]")
             st.dataframe(sleep_df.head(5), hide_index=True)
 
         st.divider()
