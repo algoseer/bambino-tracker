@@ -187,9 +187,10 @@ def create_radar_plot(df, timestamp_column='timestamp'):
     for marker, category, color in zip(markers, categories, colors):
         filtered_events = df_filtered[df_filtered['event'].str.startswith(category)]
         times = [(t.hour + t.minute / 60)*360/24 for t in filtered_events['time']]
+        dates = [1 if d==date else 0 for d in filtered_events['date']]
         comments = [a if a else "" for a in filtered_events['comments']]
         fig.add_trace(go.Scatterpolar(
-            r=[idx] * len(times),
+            r=[idx-0.2*d for d in dates],
             theta=times,
             mode='markers',
             customdata=comments,
