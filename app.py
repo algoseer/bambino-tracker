@@ -91,9 +91,9 @@ def time_since_last(df, event_type, start_date):
                 modifier += ":point_right:"
             if 'L' in last_event_string:
                 modifier += ':point_left:'
-            return str(time_diff), modifier
+            return time_diff, modifier
         else:
-            return str(time_diff)
+            return time_diff
 
 def count_events(df, event_type, start_time):
     #only last 24 hrs not by date
@@ -346,26 +346,26 @@ def main():
     col3, col4, col4b  = st.columns(3)
     with col3:
         last_time_diaper = time_since_last(df, "Diaper Change", start_date)
-        st.metric("🩲 Diaper change", last_time_diaper)
+        st.metric("🩲 Diaper change", str(last_time_diaper))
     with col4:
         #Find last feeding side
         last_time_feeding, modifier = time_since_last(df, "Breastfeeding", start_date)
-        st.metric(f"🍼 Feeding {modifier}", last_time_feeding)
+        st.metric(f"🍼 Feeding {modifier}", str(last_time_feeding))
     with col4b:
         #Find last feeding side
         last_time = time_since_last(df, "Sleep", start_date)
         if last_time < last_time_diaper and last_time < last_time_feeding:
-            st.metric(f":sleeping: Sleep", last_time)
+            st.metric(f":sleeping: Sleep", str(last_time))
         else:
             st.metric(f":sleeping: Sleep", "N/A")
 
     col4, col5,col6 = st.columns(3)
     with col4:
-        st.metric(":woman: Pain Med", time_since_last(df, "Mom Painmeds", start_date))
+        st.metric(":woman: Pain Med", str(time_since_last(df, "Mom Painmeds", start_date)))
     with col5:
-        st.metric(":baby: Vitamin D", time_since_last(df, "Vitamin D", start_date))
+        st.metric(":baby: Vitamin D", str(time_since_last(df, "Vitamin D", start_date)))
     with col6:
-        st.metric(":woman: Prenatal vitamins", time_since_last(df, "Prenatal vitamins", start_date))
+        st.metric(":woman: Prenatal vitamins", str(time_since_last(df, "Prenatal vitamins", start_date)))
 
 
     _,col1, col2, _ = st.columns(4)
