@@ -165,6 +165,7 @@ def update_logs(df_edited):
         conn = sqlite3.connect(DATABASE_NAME)
         c = conn.cursor()
         for index, row in df_edited.iterrows():
+            # st.markdown(edited_df)
             combined_datetime = PDT.localize(datetime.combine(row['date'], row['time']))
             combined_datetime_utc = combined_datetime.astimezone(pytz.utc).strftime('%Y-%m-%d %H:%M:%S')
             if row['comments']:
@@ -227,13 +228,27 @@ def create_radar_plot(df, timestamp_column='timestamp'):
     return fig
 
 
+def add_time_to_last_event(df, time_to_add, event_type="Breastfeeding"):
+    filtered_df = df[pd.to_datetime(df['timestamp']).dt.date >= start_date] #this is in pdt
+    last_event_df = filtered_df[filtered_df['event'].str.startswith(event_type)]
+    last_event = last_event_df['timestamp'].max()
+
+    if pd.isnull(last_event):
+        return "N/A"
+    else:
+        comment = f"Lasted {time_to_add}"
+        edited_df = last_event_df[last_event_df['timestamp']==last_event]
+        edited_df["comments"] = comment
+        update_logs(edited_df)
+
+
 def main():
     st.title("👶 Baby Tracking System 💜")
     create_table()
 
 
     disable_push =  bool(int(st.query_params.get("viewonly", "0")))
-
+    df = load_data(start_date)
 
     comments = st.sidebar.text_input("Comments")
 
@@ -248,6 +263,13 @@ def main():
 
         event= ','.join(event)
         log_event(event, comments=comments)
+
+    if st.sidebar.button("배불러", icon="👩‍🍼"):
+        last_time_feeding, _ = time_since_last(df, "Breastfeeding", start_date)
+        add_time_to_last_event(df, str(last_time_feeding), event_type="Breastfeeding")
+        st.sidebar.success("Done!")
+        time.sleep(1)
+        st.rerun()
 
     if st.sidebar.button("Sleep", icon="😴", disabled = disable_push):
         log_event('Sleep', comments=comments)
@@ -277,7 +299,6 @@ def main():
     if st.sidebar.button("Vitamin D", icon=":material/water_drop:", disabled=disable_push):
         log_event("Vitamin D")
 
-    df = load_data(start_date)
 
     stats = st.toggle("Show daily stats")
     if stats:
@@ -377,8 +398,6 @@ def main():
 
 
     edit_mode = st.sidebar.checkbox("Edit Logs", disabled=disable_push)
-    # edit_mode = False
-
 
     if edit_mode:
         df_edited = st.data_editor(df, column_config={
