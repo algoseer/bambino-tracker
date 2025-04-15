@@ -375,7 +375,7 @@ def main():
     with col4b:
         #Find last feeding side
         last_time = time_since_last(df, "Sleep", start_date)
-        if last_time < last_time_diaper and last_time < last_time_feeding:
+        if last_time!="N/A" and st_time < last_time_diaper and last_time < last_time_feeding:
             st.metric(f":sleeping: Sleep", str(last_time))
         else:
             st.metric(f":sleeping: Sleep", "N/A")
