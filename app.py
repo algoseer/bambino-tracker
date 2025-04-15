@@ -336,27 +336,28 @@ def main():
             else:
                 return f"{date_str} / Night / {time_str}"
 
-        with colc:
-            sleep_df = analyze_sleep_durations(df, start_date)
-            last_duration = sleep_df['duration'].iloc[-1]
-            avg_duration = sleep_df['duration'].median()
-            max_duration = sleep_df['duration'].max()
+        sleep_df = analyze_sleep_durations(df, start_date)
+        if not sleep_df.empty:
+            with colc:
+                last_duration = sleep_df['duration'].iloc[-1]
+                avg_duration = sleep_df['duration'].median()
+                max_duration = sleep_df['duration'].max()
 
-            hours, minutes = dt_to_hr_mins(last_duration)
-            st.metric(f"Last sleep duration", f"{hours:02d}:{minutes:02d}")
+                hours, minutes = dt_to_hr_mins(last_duration)
+                st.metric(f"Last sleep duration", f"{hours:02d}:{minutes:02d}")
 
-            hours, minutes = dt_to_hr_mins(avg_duration)
-            st.metric(f"Average sleep duration (24h)", f"{hours:02d}:{minutes:02d}")
+                hours, minutes = dt_to_hr_mins(avg_duration)
+                st.metric(f"Average sleep duration (24h)", f"{hours:02d}:{minutes:02d}")
 
-            hours, minutes = dt_to_hr_mins(max_duration)
-            st.metric(f"Longest sleep duration (24h)", f"{hours:02d}:{minutes:02d}")
+                hours, minutes = dt_to_hr_mins(max_duration)
+                st.metric(f"Longest sleep duration (24h)", f"{hours:02d}:{minutes:02d}")
 
 
-        with cold:
-            sleep_df = sleep_df.sort_values(by='duration', ascending=False).reset_index(drop=True)
-            sleep_df["start_time"] = sleep_df['start_time'].apply(format_timestamp_with_day_period)
-            st.markdown(":green[Top scores last 24 hrs]")
-            st.dataframe(sleep_df.head(5), hide_index=True)
+            with cold:
+                sleep_df = sleep_df.sort_values(by='duration', ascending=False).reset_index(drop=True)
+                sleep_df["start_time"] = sleep_df['start_time'].apply(format_timestamp_with_day_period)
+                st.markdown(":green[Top scores last 24 hrs]")
+                st.dataframe(sleep_df.head(5), hide_index=True)
 
         st.divider()
 
