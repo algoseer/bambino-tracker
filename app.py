@@ -4,7 +4,7 @@ import sqlite3
 import time
 import pandas as pd
 from functools import partial
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, time
 import pytz
 import plotly.graph_objects as go
 import plotly.express as px
@@ -16,6 +16,10 @@ start_date = st.sidebar.date_input("Show events from:", yesterday)
 # Get the current time, and subtract 24 hours
 now = datetime.now(PDT)
 twenty_four_hours_ago = now - timedelta(hours=24)
+midnight_time = time(11, 59, 0)  # Hours, minutes, seconds
+midnight_datetime = datetime.combine(yesterday, midnight_time)
+midnight_datetime_pdt = PDT.localize(midnight_datetime)
+
 
 def create_table(dbname=DATABASE_NAME):
     conn = sqlite3.connect(dbname)
@@ -288,10 +292,14 @@ def main():
         if "Poop" in poop_pee_selection:
             log_event(f"Poop, {poop_color}", comments=comments)
 
+    if st.sidebar.button("Tummy Time", icon="💪", disabled=disable_push):
+        log_event("Tummy Time")
     
     st.sidebar.divider()
     if st.sidebar.button("Mom Painmeds",icon=":material/medication:", disabled=disable_push):
         log_event("Mom Painmeds")
+    if st.sidebar.button("Antibiotic",icon=":material/pill:", disabled=disable_push):
+        log_event("Mom Antibiotic")
 
     if st.sidebar.button("Prenatal vitamins", icon="💊", disabled=disable_push):
         log_event("Prenatal vitamins")
@@ -302,13 +310,13 @@ def main():
 
     stats = st.toggle("Show daily stats")
     if stats:
-        cola, colb= st.columns(2)
-        with cola:
-            fig = create_radar_plot(df)
-            st.plotly_chart(fig)
-        with colb:
-            ctr, fig = count_balance(df, start_date)
-            st.plotly_chart(fig)
+        # cola, colb= st.columns(2)
+        # with cola:
+        fig = create_radar_plot(df)
+        st.plotly_chart(fig)
+        # with colb:
+        #     ctr, fig = count_balance(df, start_date)
+        #     st.plotly_chart(fig)
 
         colc, cold = st.columns(2)
 
@@ -363,9 +371,17 @@ def main():
 
     # now_pdt = datetime.now(PDT).strftime("%Y-%m-%d %H:%M:%S %Z")
     # st.metric("**Current Time (PDT):**", now_pdt)
+    col1, col2,col3 = st.columns(3)
+    with col1:
+        st.metric("Pee count", count_events(df, "Pee", twenty_four_hours_ago))
+    with col2:
+        st.metric("Poop count", count_events(df, "Poop", twenty_four_hours_ago))
+    with col3:
+        #Find last feeding side
+        st.metric(":muscle: Tummy Time", count_events(df, "Tummy Time", twenty_four_hours_ago))
 
     st.subheader("Time since last")
-    col3, col4, col4b  = st.columns(3)
+    col3, col4, col4b= st.columns(3)
     with col3:
         last_time_diaper = time_since_last(df, "Diaper Change", start_date)
         st.metric("🩲 Diaper change", str(last_time_diaper))
@@ -381,20 +397,16 @@ def main():
         else:
             st.metric(f":sleeping: Sleep", "N/A")
 
-    col4, col5,col6 = st.columns(3)
+    col4, col5,col6,col7 = st.columns(4)
     with col4:
         st.metric(":woman: Pain Med", str(time_since_last(df, "Mom Painmeds", start_date)))
     with col5:
-        st.metric(":baby: Vitamin D", str(time_since_last(df, "Vitamin D", start_date)))
+        st.metric(":woman: Antibiotic", "{}/4".format(count_events(df, "Mom Antibiotic", midnight_datetime_pdt)))
     with col6:
+        st.metric(":baby: Vitamin D", str(time_since_last(df, "Vitamin D", start_date)))
+    with col7:
         st.metric(":woman: Prenatal vitamins", str(time_since_last(df, "Prenatal vitamins", start_date)))
 
-
-    _,col1, col2, _ = st.columns(4)
-    with col1:
-        st.metric("Pee count", count_events(df, "Pee", twenty_four_hours_ago))
-    with col2:
-        st.metric("Poop count", count_events(df, "Poop", twenty_four_hours_ago))
 
 
 
