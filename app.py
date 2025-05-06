@@ -4,19 +4,19 @@ import sqlite3
 import time
 import pandas as pd
 from functools import partial
-from datetime import datetime, timedelta, date, time
+from datetime import datetime, timedelta, date, time as time_obj
 import pytz
 import plotly.graph_objects as go
 import plotly.express as px
 
 DATABASE_NAME = "baby_log.db"
 PDT = pytz.timezone('US/Pacific')
-yesterday = date.today() - timedelta(days=1)
+yesterday = datetime.now(PDT) - timedelta(days=1)
 start_date = st.sidebar.date_input("Show events from:", yesterday)
 # Get the current time, and subtract 24 hours
 now = datetime.now(PDT)
 twenty_four_hours_ago = now - timedelta(hours=24)
-midnight_time = time(11, 59, 0)  # Hours, minutes, seconds
+midnight_time = time_obj(23, 59, 0)  # Hours, minutes, seconds
 midnight_datetime = datetime.combine(yesterday, midnight_time)
 midnight_datetime_pdt = PDT.localize(midnight_datetime)
 
@@ -378,7 +378,7 @@ def main():
         st.metric("Poop count", count_events(df, "Poop", twenty_four_hours_ago))
     with col3:
         #Find last feeding side
-        st.metric(":muscle: Tummy Time", count_events(df, "Tummy Time", twenty_four_hours_ago))
+        st.metric(":muscle: Tummy Time", count_events(df, "Tummy Time", midnight_datetime_pdt))
 
     st.subheader("Time since last")
     col3, col4, col4b= st.columns(3)
