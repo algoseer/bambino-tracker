@@ -77,7 +77,10 @@ def time_since_last(df, event_type, start_date):
     last_event = last_event_df['timestamp'].max()
 
     if pd.isnull(last_event):
-        return "N/A"
+        if event_type == "Breastfeeding":
+            return "N/A",""
+        else:
+            return "N/A"
     else:
         last_event_dt = PDT.localize(datetime.strptime(last_event, '%Y-%m-%d %H:%M:%S'))
         now_pdt = datetime.now(PDT)
@@ -296,10 +299,10 @@ def main():
         log_event("Tummy Time")
     
     st.sidebar.divider()
-    if st.sidebar.button("Mom Painmeds",icon=":material/medication:", disabled=disable_push):
-        log_event("Mom Painmeds")
-    if st.sidebar.button("Antibiotic",icon=":material/pill:", disabled=disable_push):
-        log_event("Mom Antibiotic")
+    # if st.sidebar.button("Mom Painmeds",icon=":material/medication:", disabled=disable_push):
+    #     log_event("Mom Painmeds")
+    # if st.sidebar.button("Antibiotic",icon=":material/pill:", disabled=disable_push):
+    #     log_event("Mom Antibiotic")
 
     if st.sidebar.button("Prenatal vitamins", icon="💊", disabled=disable_push):
         log_event("Prenatal vitamins")
@@ -397,15 +400,21 @@ def main():
         else:
             st.metric(f":sleeping: Sleep", "N/A")
 
-    col4, col5,col6,col7 = st.columns(4)
-    with col4:
-        st.metric(":woman: Pain Med", str(time_since_last(df, "Mom Painmeds", start_date)))
+    col4,col5, col6,col7 = st.columns(4)
+    # with col4:
+    #     st.metric(":woman: Pain Med", str(time_since_last(df, "Mom Painmeds", start_date)))
+    # with col5:
+    #     st.metric(":woman: Antibiotic", "{}/4".format(count_events(df, "Mom Antibiotic", midnight_datetime_pdt)))
     with col5:
-        st.metric(":woman: Antibiotic", "{}/4".format(count_events(df, "Mom Antibiotic", midnight_datetime_pdt)))
+        if str(time_since_last(df, "Vitamin D", start_date)) != "N/A":
+            st.metric(":baby: Vitamin D", "✅")
+        else:
+            st.metric(":baby: Vitamin D", "⚠️")
     with col6:
-        st.metric(":baby: Vitamin D", str(time_since_last(df, "Vitamin D", start_date)))
-    with col7:
-        st.metric(":woman: Prenatal vitamins", str(time_since_last(df, "Prenatal vitamins", start_date)))
+        if str(time_since_last(df, "Prenatal vitamins", start_date)) != "N/A":
+            st.metric(":woman: Prenatal vitamins", "✅")
+        else:
+            st.metric(":woman: Prenatal vitamins", "⚠️")
 
 
 

@@ -4,6 +4,7 @@ FROM python:3.10-slim
 WORKDIR /app
 
 COPY requirements.txt .
+COPY ext_reqs.txt .
 RUN pip install --progress-bar off --no-cache-dir -r requirements.txt
 
 EXPOSE 8501

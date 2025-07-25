@@ -1,4 +1,6 @@
+pyarrow==9.0.0
 streamlit
 pandas
 pytz
 plotly
+-r ext_reqs.txt

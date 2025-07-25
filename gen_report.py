@@ -11,11 +11,6 @@ import base64
 # load_data, time_since_last, count_events, create_radar_plot, analyze_sleep_durations_df
 DATABASE_NAME = "baby_log.db"
 PDT = pytz.timezone('US/Pacific')
-yesterday = date.today() - timedelta(days=1)
-start_date = yesterday
-# Get the current time, and subtract 24 hours
-now = datetime.now(PDT)
-twenty_four_hours_ago = now - timedelta(hours=24)
 
 def dt_to_hr_mins(time):
     total_seconds = time.total_seconds()
@@ -169,7 +164,7 @@ def calculate_average_sleep_duration(sleep_df):
     return hours, minutes
 
 #Plot data that is showing in the table below on a radar plot
-def create_radar_plot(df, timestamp_column='timestamp'):
+def create_radar_plot(df,  twenty_four_hours_ago, timestamp_column='timestamp'):
 
     ## Filter only for events in the last 24 hrs.
     df_filtered = df.copy()
@@ -218,7 +213,7 @@ def create_radar_plot(df, timestamp_column='timestamp'):
 
 ### END OF function copy
 
-def generate_pdf_report_fpdf(df, start_date):
+def generate_pdf_report_fpdf(df, start_date, twenty_four_hours_ago):
     """Generates a PDF report using FPDF."""
 
     pdf = FPDF()
@@ -286,7 +281,7 @@ def generate_pdf_report_fpdf(df, start_date):
     pdf.set_font("Arial", 'B', 14)
     pdf.cell(0, 10, "Activity Radar Plot", 0, 1)
 
-    fig = create_radar_plot(df)
+    fig = create_radar_plot(df, twenty_four_hours_ago)
     img_data = fig.to_image(format="png")
     img_base64 = base64.b64encode(img_data).decode("utf-8")
     img_io = BytesIO(base64.b64decode(img_base64))
@@ -296,8 +291,16 @@ def generate_pdf_report_fpdf(df, start_date):
     return pdf.output(dest='S')
 
 def do_report():
+
+    yesterday = date.today() - timedelta(days=1)
+    start_date = yesterday
+
+    # Get the current time, and subtract 24 hours
+    now = datetime.now(PDT)
+    twenty_four_hours_ago = now - timedelta(hours=24)
+
     df = load_data(start_date)
-    report_pdf_fpdf = generate_pdf_report_fpdf(df, start_date)
+    report_pdf_fpdf = generate_pdf_report_fpdf(df, start_date, twenty_four_hours_ago)
     with open("report.pdf", "wb") as f:
         f.write(report_pdf_fpdf)
 
